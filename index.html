@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>PRIMAL PANIC | FROST TERMINAL</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
     <style>
         :root { 
             --neon-blue: #00d2ff; 
@@ -136,20 +139,35 @@
     </div>
 
     <script>
+        // --- FIREBASE CONFIGURATION ---
+        // REPLACE THIS WITH YOUR ACTUAL FIREBASE KEYS
+        const firebaseConfig = {
+            apiKey: "AIzaSyAc-iRo-enyFz1PHefmLjGBCKvBjWWWoXs",
+            authDomain: "primaldata-700c3.firebaseapp.com",
+            databaseURL: "https://primaldata-700c3-default-rtdb.firebaseio.com",
+            projectId: "primaldata-700c3",
+            storageBucket: "primaldata-700c3.firebasestorage.app",
+            messagingSenderId: "891841602542",
+            appId: "1:891841602542:web:9eb20090b614d762b5a4ff"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
         const WEBHOOK = "https://discord.com/api/webhooks/1455169892415443139/9o_j_YqPQ1BoHSvxv1BXymZESPVY7fKF5srBwKUp6jtiHUydqQfqsF2EGER36IeF2kSW";
         const LOG_WEBHOOK = "https://discord.com/api/webhooks/1455188856189227282/HbFUbggQQ7Fa8SFiGMmbQOjYoktu8vflyc9Pn9Rjjq9j1P8RzLeZrWk7AvhdXgaxB5Y9";
         
-        // This will hold the code generated during the current page load
         let CURRENT_SESSION_CODE = "";
+        let staffList = {}; // To store local copy of cloud data
 
         /* AUTO LOGGING & CODE GENERATION */
         window.onload = function() {
-            const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Simplified for easy typing
+            const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let randomCode = '';
             for (let i = 0; i < 8; i++) {
                 randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
             }
-            
             CURRENT_SESSION_CODE = randomCode;
             
             const logData = {
@@ -207,17 +225,27 @@
             if (enteredKey === CURRENT_SESSION_CODE) {
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('dashboard').style.display = 'block';
-                loadData();
+                startLiveSync();
             } else {
                 alert("SESSION SYNC FAILED: INVALID ACCESS KEY");
             }
         }
 
-        /* DATA LOGIC */
+        /* FIREBASE LIVE SYNC */
+        function startLiveSync() {
+            // This function listens for ANY changes in the database and updates everyone's screen
+            db.ref('staff').on('value', (snapshot) => {
+                staffList = snapshot.val() || {};
+                renderTable();
+            });
+        }
+
         function saveStaff() {
             const id = document.getElementById('edit-id').value;
-            const staff = {
-                id: id ? parseInt(id) : Date.now(),
+            const staffId = id ? id : Date.now(); // Firebase works better with strings or numbers
+            
+            const staffData = {
+                id: staffId,
                 name: document.getElementById('name').value,
                 rank: document.getElementById('rank').value,
                 region: document.getElementById('region').value,
@@ -227,26 +255,24 @@
                 strikes: document.getElementById('strikes').value
             };
 
-            if (!staff.name) return alert("System Error: No Staff Name Identified");
+            if (!staffData.name) return alert("System Error: No Staff Name Identified");
 
-            let list = JSON.parse(localStorage.getItem('primal_frost_db')) || [];
-            if (id) {
-                const idx = list.findIndex(m => m.id === staff.id);
-                list[idx] = staff;
-            } else {
-                list.push(staff);
-            }
-
-            localStorage.setItem('primal_frost_db', JSON.stringify(list));
-            sendDiscord(staff, id ? "PROFILE_REVISION" : "NEW_STAFF_RECORD");
-            resetForm();
-            loadData();
+            // Save to Firebase Cloud
+            db.ref('staff/' + staffId).set(staffData)
+            .then(() => {
+                sendDiscord(staffData, id ? "PROFILE_REVISION" : "NEW_STAFF_RECORD");
+                resetForm();
+            })
+            .catch(err => alert("Cloud Sync Error: " + err.message));
         }
 
-        function loadData() {
-            const list = JSON.parse(localStorage.getItem('primal_frost_db')) || [];
+        function renderTable() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
+            
+            // Firebase returns an object, we turn it into an array for easy sorting
+            const list = Object.values(staffList);
+
             list.forEach(m => {
                 const row = tbody.insertRow();
                 row.innerHTML = `
@@ -258,16 +284,17 @@
                     <td style="font-weight:bold;">${m.status}</td>
                     <td style="color:red; font-weight:bold;">${m.strikes}</td>
                     <td>
-                        <span class="btn-edit" onclick="startEdit(${m.id})">MODIFY</span>
-                        <span class="btn-del" onclick="deleteStaff(${m.id})">WIPE</span>
+                        <span class="btn-edit" onclick="startEdit('${m.id}')">MODIFY</span>
+                        <span class="btn-del" onclick="deleteStaff('${m.id}')">WIPE</span>
                     </td>
                 `;
             });
         }
 
         function startEdit(id) {
-            const list = JSON.parse(localStorage.getItem('primal_frost_db')) || [];
-            const m = list.find(x => x.id === id);
+            const m = staffList[id];
+            if (!m) return;
+
             document.getElementById('edit-id').value = m.id;
             document.getElementById('name').value = m.name;
             document.getElementById('rank').value = m.rank;
@@ -298,10 +325,7 @@
 
         function deleteStaff(id) {
             if(confirm("CONFIRM DATA PURGE?")) {
-                let list = JSON.parse(localStorage.getItem('primal_frost_db')) || [];
-                list = list.filter(m => m.id !== id);
-                localStorage.setItem('primal_frost_db', JSON.stringify(list));
-                loadData();
+                db.ref('staff/' + id).remove();
             }
         }
 
