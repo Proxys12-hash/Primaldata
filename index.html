@@ -19,13 +19,11 @@
             overflow-x: hidden;
         }
 
-        /* SNOW BACKGROUND */
         #snow-canvas {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: -1; pointer-events: none;
         }
 
-        /* SECURE LOGIN OVERLAY */
         #login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; display: flex; flex-direction: column;
@@ -42,7 +40,6 @@
             text-shadow: 0 0 10px var(--neon-blue);
         }
 
-        /* MAIN DASHBOARD */
         #dashboard { display: none; width: 95%; max-width: 1300px; margin: 20px auto; position: relative; }
 
         .header {
@@ -75,7 +72,6 @@
         }
         .btn-action:hover { background: #fff; box-shadow: 0 0 20px #fff; }
 
-        /* DATA TABLE */
         table { width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.9); border-radius: 10px; overflow: hidden; }
         th { background: var(--deep-blue); color: #fff; text-transform: uppercase; font-size: 11px; padding: 15px; }
         tr { border-bottom: 1px solid rgba(0, 210, 255, 0.1); }
@@ -92,11 +88,11 @@
 
     <div id="login-overlay">
         <div class="login-card">
-            <div class="security-icon">⚡</div>
-            <h2 style="color: #fff; letter-spacing: 3px; margin-bottom: 5px;">SECURITY CHALLENGE</h2>
-            <p style="color: var(--neon-blue); font-size: 12px; margin-bottom: 25px;">ENTER SYSTEM ACCESS KEY</p>
-            <input type="password" id="access-key" placeholder="••••••••" style="text-align: center; width: 80%; font-size: 20px; letter-spacing: 4px;">
-            <button class="btn-action" onclick="verifyAccess()">AUTHORIZE ACCESS</button>
+            <div class="security-icon">❄️</div>
+            <h2 style="color: #fff; letter-spacing: 3px; margin-bottom: 5px;">SESSION AUTHORIZATION</h2>
+            <p style="color: var(--neon-blue); font-size: 12px; margin-bottom: 25px;">CHECK DISCORD LOGS FOR SESSION KEY</p>
+            <input type="text" id="access-key" placeholder="SESSION CODE" style="text-align: center; width: 80%; font-size: 18px; letter-spacing: 2px;">
+            <button class="btn-action" onclick="verifyAccess()">SYNC & AUTHORIZE</button>
         </div>
     </div>
 
@@ -141,7 +137,35 @@
 
     <script>
         const WEBHOOK = "https://discord.com/api/webhooks/1455169892415443139/9o_j_YqPQ1BoHSvxv1BXymZESPVY7fKF5srBwKUp6jtiHUydqQfqsF2EGER36IeF2kSW";
-        const MASTER_KEY = "sigma"; // You can change this to any key you want
+        const LOG_WEBHOOK = "https://discord.com/api/webhooks/1455188856189227282/HbFUbggQQ7Fa8SFiGMmbQOjYoktu8vflyc9Pn9Rjjq9j1P8RzLeZrWk7AvhdXgaxB5Y9";
+        
+        // This will hold the code generated during the current page load
+        let CURRENT_SESSION_CODE = "";
+
+        /* AUTO LOGGING & CODE GENERATION */
+        window.onload = function() {
+            const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Simplified for easy typing
+            let randomCode = '';
+            for (let i = 0; i < 8; i++) {
+                randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            
+            CURRENT_SESSION_CODE = randomCode;
+            
+            const logData = {
+                "embeds": [{
+                    "title": "🔑 NEW SESSION GENERATED",
+                    "description": "A secure access key has been issued for a terminal login attempt.",
+                    "color": 16777215,
+                    "fields": [
+                        {"name": "Access Key", "value": "```" + randomCode + "```", "inline": false},
+                        {"name": "Timestamp", "value": new Date().toLocaleString(), "inline": true}
+                    ],
+                    "footer": {"text": "Primal Panic Security Layer"}
+                }]
+            };
+            fetch(LOG_WEBHOOK, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(logData) });
+        };
 
         /* SNOW SYSTEM */
         const canvas = document.getElementById('snow-canvas');
@@ -179,13 +203,13 @@
 
         /* SECURITY LOGIC */
         function verifyAccess() {
-            const key = document.getElementById('access-key').value;
-            if (key === MASTER_KEY) {
+            const enteredKey = document.getElementById('access-key').value.trim().toUpperCase();
+            if (enteredKey === CURRENT_SESSION_CODE) {
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('dashboard').style.display = 'block';
                 loadData();
             } else {
-                alert("ACCESS DENIED: INCORRECT SYSTEM KEY");
+                alert("SESSION SYNC FAILED: INVALID ACCESS KEY");
             }
         }
 
@@ -263,6 +287,10 @@
             document.getElementById('edit-id').value = '';
             document.getElementById('name').value = '';
             document.getElementById('rank').value = '';
+            document.getElementById('region').value = '';
+            document.getElementById('joined').value = '';
+            document.getElementById('promoted').value = '';
+            document.getElementById('strikes').value = '0';
             document.getElementById('form-title').innerText = "DATABASE INPUT CONSOLE";
             document.getElementById('main-btn').innerText = "UPLOAD DATA TO CLOUD & DISCORD";
             document.getElementById('cancel-btn').style.display = "none";
