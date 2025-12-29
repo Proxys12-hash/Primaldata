@@ -1,146 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>PRIMAL PANIC | FROST TERMINAL</title>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    
-    <style>
-        :root { 
-            --neon-blue: #00d2ff; 
-            --deep-blue: #003366;
-            --glass-bg: rgba(5, 5, 5, 0.95);
-            --border-glow: 0 0 15px rgba(0, 210, 255, 0.4);
-        }
-
-        body { 
-            background: #000; 
-            color: #fff; 
-            font-family: 'Segoe UI', sans-serif; 
-            margin: 0; min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        #snow-canvas {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -1; pointer-events: none;
-        }
-
-        #login-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 9999;
-        }
-        .login-card {
-            background: var(--glass-bg); border: 2px solid var(--neon-blue);
-            padding: 50px; border-radius: 10px; text-align: center;
-            box-shadow: var(--border-glow);
-            width: 350px;
-        }
-        .security-icon {
-            font-size: 50px; margin-bottom: 20px; color: var(--neon-blue);
-            text-shadow: 0 0 10px var(--neon-blue);
-        }
-
-        #dashboard { display: none; width: 95%; max-width: 1300px; margin: 20px auto; position: relative; }
-
-        .header {
-            background: linear-gradient(135deg, #000, var(--deep-blue));
-            padding: 25px; border-radius: 10px; border-bottom: 3px solid var(--neon-blue);
-            margin-bottom: 25px; box-shadow: var(--border-glow);
-            text-align: center;
-        }
-        h1 { margin: 0; font-style: italic; font-weight: 900; letter-spacing: 6px; color: #fff; text-shadow: 0 0 10px var(--neon-blue); }
-
-        .console-box {
-            background: var(--glass-bg); border: 1px solid rgba(0, 210, 255, 0.2);
-            padding: 25px; border-radius: 15px; margin-bottom: 30px;
-        }
-
-        .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
-        .input-wrap { display: flex; flex-direction: column; }
-        .input-header-text { font-size: 10px; color: var(--neon-blue); margin-bottom: 6px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-
-        input, select {
-            background: #000; border: 1px solid #222; color: #fff;
-            padding: 12px; border-radius: 5px; outline: none; transition: 0.3s;
-        }
-        input:focus { border-color: var(--neon-blue); box-shadow: 0 0 8px var(--neon-blue); }
-
-        .btn-action {
-            background: var(--neon-blue); color: #000; border: none; padding: 15px;
-            font-weight: 900; cursor: pointer; border-radius: 5px; width: 100%;
-            margin-top: 20px; text-transform: uppercase; letter-spacing: 2px; transition: 0.3s;
-        }
-        .btn-action:hover { background: #fff; box-shadow: 0 0 20px #fff; }
-
-        table { width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.9); border-radius: 10px; overflow: hidden; }
-        th { background: var(--deep-blue); color: #fff; text-transform: uppercase; font-size: 11px; padding: 15px; }
-        tr { border-bottom: 1px solid rgba(0, 210, 255, 0.1); }
-        td { padding: 15px; text-align: center; font-size: 13px; }
-
-        .btn-edit { color: var(--neon-blue); cursor: pointer; border: 1px solid var(--neon-blue); padding: 5px 12px; border-radius: 4px; font-size: 11px; }
-        .btn-edit:hover { background: var(--neon-blue); color: #000; }
-        .btn-del { color: #ff4444; cursor: pointer; margin-left: 15px; font-size: 11px; text-decoration: underline; }
-    </style>
-</head>
-<body>
-
-    <canvas id="snow-canvas"></canvas>
-
-    <div id="login-overlay">
-        <div class="login-card">
-            <div class="security-icon">❄️</div>
-            <h2 style="color: #fff; letter-spacing: 3px; margin-bottom: 5px;">SESSION AUTHORIZATION</h2>
-            <p style="color: var(--neon-blue); font-size: 12px; margin-bottom: 25px;">CHECK DISCORD LOGS FOR SESSION KEY</p>
-            <input type="text" id="access-key" placeholder="SESSION CODE" style="text-align: center; width: 80%; font-size: 18px; letter-spacing: 2px;">
-            <button class="btn-action" onclick="verifyAccess()">SYNC & AUTHORIZE</button>
-        </div>
-    </div>
-
-    <div id="dashboard">
-        <div class="header">
-            <h1>PRIMAL PANIC // STAFF CORE</h1>
-            <p style="margin:5px 0 0 0; font-weight:bold; color: var(--neon-blue); letter-spacing: 2px;">ENCRYPTED MANAGEMENT TERMINAL</p>
-        </div>
-
-        <div class="console-box">
-            <h3 id="form-title" style="color: #fff; margin-top:0; letter-spacing: 1px;">DATABASE INPUT CONSOLE</h3>
-            <input type="hidden" id="edit-id">
-            <div class="grid-inputs">
-                <div class="input-wrap"><span class="input-header-text">Staff Username</span><input type="text" id="name"></div>
-                <div class="input-wrap"><span class="input-header-text">Security Rank</span><input type="text" id="rank"></div>
-                <div class="input-wrap"><span class="input-header-text">Region (Timezone)</span><input type="text" id="region"></div>
-                <div class="input-wrap"><span class="input-header-text">Member Joined On</span><input type="date" id="joined"></div>
-                <div class="input-wrap"><span class="input-header-text">Latest Promotion On</span><input type="date" id="promoted"></div>
-                <div class="input-wrap">
-                    <span class="input-header-text">Duty Status</span>
-                    <select id="status">
-                        <option value="ACTIVE">ACTIVE</option>
-                        <option value="ON BREAK">ON BREAK</option>
-                        <option value="EXEMPT">EXEMPT</option>
-                    </select>
-                </div>
-                <div class="input-wrap"><span class="input-header-text">Strike Count</span><input type="number" id="strikes" value="0"></div>
-            </div>
-            <button id="main-btn" class="btn-action" onclick="saveStaff()">UPLOAD DATA TO CLOUD & DISCORD</button>
-            <button id="cancel-btn" style="display:none; background: #222; color: #fff; margin-top:10px;" class="btn-action" onclick="resetForm()">ABORT EDIT</button>
-        </div>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Staff Name</th><th>Rank</th><th>Region</th><th>Joined Date</th><th>Promotion Date</th><th>Status</th><th>Strikes</th><th>Management</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody"></tbody>
-        </table>
-    </div>
-
-    <script>
-        // --- FIREBASE CONFIGURATION ---
-        // REPLACE THIS WITH YOUR ACTUAL FIREBASE KEYS
+// --- FIREBASE CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyAc-iRo-enyFz1PHefmLjGBCKvBjWWWoXs",
             authDomain: "primaldata-700c3.firebaseapp.com",
@@ -151,7 +9,6 @@
             appId: "1:891841602542:web:9eb20090b614d762b5a4ff"
         };
 
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
@@ -159,9 +16,9 @@
         const LOG_WEBHOOK = "https://discord.com/api/webhooks/1455188856189227282/HbFUbggQQ7Fa8SFiGMmbQOjYoktu8vflyc9Pn9Rjjq9j1P8RzLeZrWk7AvhdXgaxB5Y9";
         
         let CURRENT_SESSION_CODE = "";
-        let staffList = {}; // To store local copy of cloud data
+        let staffList = {}; 
 
-        /* AUTO LOGGING & CODE GENERATION */
+        /* SECURE CODE GENERATION & AUTO-DELETE */
         window.onload = function() {
             const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let randomCode = '';
@@ -170,14 +27,28 @@
             }
             CURRENT_SESSION_CODE = randomCode;
             
+            // 1. Upload the code to Firebase so it's "Live"
+            db.ref('current_session').set({
+                code: CURRENT_SESSION_CODE,
+                timestamp: Date.now()
+            });
+
+            // 2. Set the 30-second Auto-Wipe
+            console.log("SECURITY: Session key expires in 30 seconds.");
+            setTimeout(() => {
+                db.ref('current_session').remove();
+                console.log("SECURITY: Session key purged from cloud.");
+            }, 30000); // 30000ms = 30 seconds
+
+            // 3. Send to Discord
             const logData = {
                 "embeds": [{
-                    "title": "🔑 NEW SESSION GENERATED",
-                    "description": "A secure access key has been issued for a terminal login attempt.",
+                    "title": "🔑 SECURE SESSION GENERATED",
+                    "description": "This key will EXPIRE in 30 seconds. Authorized personnel only.",
                     "color": 16777215,
                     "fields": [
                         {"name": "Access Key", "value": "```" + randomCode + "```", "inline": false},
-                        {"name": "Timestamp", "value": new Date().toLocaleString(), "inline": true}
+                        {"name": "Expires In", "value": "30 Seconds", "inline": true}
                     ],
                     "footer": {"text": "Primal Panic Security Layer"}
                 }]
@@ -185,55 +56,43 @@
             fetch(LOG_WEBHOOK, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(logData) });
         };
 
-        /* SNOW SYSTEM */
+        /* SNOW SYSTEM (UNCHANGED) */
         const canvas = document.getElementById('snow-canvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
         function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
         window.addEventListener('resize', resize);
         resize();
-
         class Particle {
             constructor() { this.reset(); this.y = Math.random() * canvas.height; }
-            reset() {
-                this.x = Math.random() * canvas.width;
-                this.y = -10;
-                this.size = Math.random() * 2 + 1;
-                this.speed = Math.random() * 1 + 0.3;
-                this.opacity = Math.random() * 0.5 + 0.2;
-            }
-            update() {
-                this.y += this.speed;
-                if (this.y > canvas.height) this.reset();
-            }
-            draw() {
-                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
-            }
+            reset() { this.x = Math.random() * canvas.width; this.y = -10; this.size = Math.random() * 2 + 1; this.speed = Math.random() * 1 + 0.3; this.opacity = Math.random() * 0.5 + 0.2; }
+            update() { this.y += this.speed; if (this.y > canvas.height) this.reset(); }
+            draw() { ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
         }
         for (let i = 0; i < 120; i++) particles.push(new Particle());
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach(p => { p.update(); p.draw(); });
-            requestAnimationFrame(animate);
-        }
+        function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); particles.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(animate); }
         animate();
 
-        /* SECURITY LOGIC */
+        /* SECURE VERIFICATION */
         function verifyAccess() {
             const enteredKey = document.getElementById('access-key').value.trim().toUpperCase();
-            if (enteredKey === CURRENT_SESSION_CODE) {
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('dashboard').style.display = 'block';
-                startLiveSync();
-            } else {
-                alert("SESSION SYNC FAILED: INVALID ACCESS KEY");
-            }
+            
+            // Check Firebase to see if the key still exists or if it was deleted
+            db.ref('current_session').once('value', (snapshot) => {
+                const session = snapshot.val();
+                
+                if (session && session.code === enteredKey) {
+                    document.getElementById('login-overlay').style.display = 'none';
+                    document.getElementById('dashboard').style.display = 'block';
+                    startLiveSync();
+                } else {
+                    alert("AUTHORIZATION DENIED: Key is invalid or has EXPIRED (30s limit). Refresh page to try again.");
+                }
+            });
         }
 
-        /* FIREBASE LIVE SYNC */
+        /* DATA SYNC LOGIC */
         function startLiveSync() {
-            // This function listens for ANY changes in the database and updates everyone's screen
             db.ref('staff').on('value', (snapshot) => {
                 staffList = snapshot.val() || {};
                 renderTable();
@@ -242,8 +101,7 @@
 
         function saveStaff() {
             const id = document.getElementById('edit-id').value;
-            const staffId = id ? id : Date.now(); // Firebase works better with strings or numbers
-            
+            const staffId = id ? id : Date.now();
             const staffData = {
                 id: staffId,
                 name: document.getElementById('name').value,
@@ -254,25 +112,17 @@
                 status: document.getElementById('status').value,
                 strikes: document.getElementById('strikes').value
             };
-
             if (!staffData.name) return alert("System Error: No Staff Name Identified");
-
-            // Save to Firebase Cloud
-            db.ref('staff/' + staffId).set(staffData)
-            .then(() => {
+            db.ref('staff/' + staffId).set(staffData).then(() => {
                 sendDiscord(staffData, id ? "PROFILE_REVISION" : "NEW_STAFF_RECORD");
                 resetForm();
-            })
-            .catch(err => alert("Cloud Sync Error: " + err.message));
+            });
         }
 
         function renderTable() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
-            
-            // Firebase returns an object, we turn it into an array for easy sorting
             const list = Object.values(staffList);
-
             list.forEach(m => {
                 const row = tbody.insertRow();
                 row.innerHTML = `
@@ -286,15 +136,13 @@
                     <td>
                         <span class="btn-edit" onclick="startEdit('${m.id}')">MODIFY</span>
                         <span class="btn-del" onclick="deleteStaff('${m.id}')">WIPE</span>
-                    </td>
-                `;
+                    </td>`;
             });
         }
 
         function startEdit(id) {
             const m = staffList[id];
             if (!m) return;
-
             document.getElementById('edit-id').value = m.id;
             document.getElementById('name').value = m.name;
             document.getElementById('rank').value = m.rank;
@@ -303,7 +151,6 @@
             document.getElementById('promoted').value = m.promoted;
             document.getElementById('status').value = m.status;
             document.getElementById('strikes').value = m.strikes;
-            
             document.getElementById('form-title').innerText = "SYSTEM REVISION: " + m.name;
             document.getElementById('main-btn').innerText = "COMMIT CHANGES";
             document.getElementById('cancel-btn').style.display = "block";
@@ -324,9 +171,7 @@
         }
 
         function deleteStaff(id) {
-            if(confirm("CONFIRM DATA PURGE?")) {
-                db.ref('staff/' + id).remove();
-            }
+            if(confirm("CONFIRM DATA PURGE?")) { db.ref('staff/' + id).remove(); }
         }
 
         function sendDiscord(data, type) {
@@ -347,6 +192,3 @@
             };
             fetch(WEBHOOK, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(embed) });
         }
-    </script>
-</body>
-</html>
