@@ -2,151 +2,177 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PRIMAL PANIC | FROST TERMINAL</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     
     <style>
         :root { 
-            --neon-blue: #00d2ff; 
-            --deep-blue: #003366;
-            --glass-bg: rgba(5, 5, 5, 0.95);
-            --border-glow: 0 0 15px rgba(0, 210, 255, 0.4);
+            --accent: #00d2ff; 
+            --accent-glow: rgba(0, 210, 255, 0.4);
+            --bg-dark: #05070a;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --card-blur: 12px;
         }
 
+        * { box-sizing: border-box; }
+
         body { 
-            background: #000; 
-            color: #fff; 
-            font-family: 'Segoe UI', sans-serif; 
-            margin: 0; min-height: 100vh;
+            background: var(--bg-dark); 
+            color: #e0e6ed; 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             overflow-x: hidden;
         }
 
         #snow-canvas {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -1; pointer-events: none;
+            z-index: -1; pointer-events: none; opacity: 0.6;
         }
 
         #login-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 9999;
-        }
-        .login-card {
-            background: var(--glass-bg); border: 2px solid var(--neon-blue);
-            padding: 50px; border-radius: 10px; text-align: center;
-            box-shadow: var(--border-glow);
-            width: 350px;
-        }
-        .security-icon {
-            font-size: 50px; margin-bottom: 20px; color: var(--neon-blue);
-            text-shadow: 0 0 10px var(--neon-blue);
+            position: fixed; inset: 0;
+            background: radial-gradient(circle at center, #0a111a 0%, #000 100%);
+            display: flex; justify-content: center; align-items: center; z-index: 9999;
+            transition: opacity 0.6s ease;
         }
 
-        #dashboard { display: none; width: 95%; max-width: 1300px; margin: 20px auto; position: relative; }
+        .login-card {
+            background: var(--glass);
+            backdrop-filter: blur(var(--card-blur));
+            border: 1px solid var(--glass-border);
+            padding: 40px; border-radius: 24px; text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            width: 90%; max-width: 400px;
+        }
+
+        .security-icon { font-size: 40px; margin-bottom: 10px; filter: drop-shadow(0 0 10px var(--accent)); }
+
+        #dashboard { 
+            display: none; width: 95%; max-width: 1200px; 
+            margin: 40px auto; padding-bottom: 100px;
+        }
 
         .header {
-            background: linear-gradient(135deg, #000, var(--deep-blue));
-            padding: 25px; border-radius: 10px; border-bottom: 3px solid var(--neon-blue);
-            margin-bottom: 25px; box-shadow: var(--border-glow);
-            text-align: center;
+            text-align: left; margin-bottom: 40px; border-left: 4px solid var(--accent);
+            padding-left: 20px;
         }
-        h1 { margin: 0; font-style: italic; font-weight: 900; letter-spacing: 6px; color: #fff; text-shadow: 0 0 10px var(--neon-blue); }
+
+        h1 { 
+            margin: 0; font-size: 2.5rem; font-weight: 800; letter-spacing: -1px; 
+            background: linear-gradient(to right, #fff, var(--accent));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
 
         .console-box {
-            background: var(--glass-bg); border: 1px solid rgba(0, 210, 255, 0.2);
-            padding: 25px; border-radius: 15px; margin-bottom: 30px;
+            background: var(--glass);
+            backdrop-filter: blur(var(--card-blur));
+            border: 1px solid var(--glass-border);
+            padding: 30px; border-radius: 20px; margin-bottom: 40px;
         }
 
-        .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
-        .input-wrap { display: flex; flex-direction: column; }
-        .input-header-text { font-size: 10px; color: var(--neon-blue); margin-bottom: 6px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; }
+        
+        .input-wrap label { 
+            display: block; font-size: 11px; font-weight: 600; 
+            color: var(--accent); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;
+        }
 
         input, select {
-            background: #000; border: 1px solid #222; color: #fff;
-            padding: 12px; border-radius: 5px; outline: none; transition: 0.3s;
+            width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+            color: #fff; padding: 12px 16px; border-radius: 12px; outline: none;
         }
-        input:focus { border-color: var(--neon-blue); box-shadow: 0 0 8px var(--neon-blue); }
 
         .btn-action {
-            background: var(--neon-blue); color: #000; border: none; padding: 15px;
-            font-weight: 900; cursor: pointer; border-radius: 5px; width: 100%;
-            margin-top: 20px; text-transform: uppercase; letter-spacing: 2px; transition: 0.3s;
+            background: var(--accent); color: #000; border: none; padding: 16px;
+            font-weight: 700; cursor: pointer; border-radius: 12px; width: 100%;
+            margin-top: 25px; transition: all 0.3s ease;
         }
-        .btn-action:hover { background: #fff; box-shadow: 0 0 20px #fff; }
 
-        table { width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.9); border-radius: 10px; overflow: hidden; }
-        th { background: var(--deep-blue); color: #fff; text-transform: uppercase; font-size: 11px; padding: 15px; }
-        tr { border-bottom: 1px solid rgba(0, 210, 255, 0.1); }
-        td { padding: 15px; text-align: center; font-size: 13px; }
-
-        .btn-edit { color: var(--neon-blue); cursor: pointer; border: 1px solid var(--neon-blue); padding: 5px 12px; border-radius: 4px; font-size: 11px; }
-        .btn-edit:hover { background: var(--neon-blue); color: #000; }
-        .btn-del { color: #ff4444; cursor: pointer; margin-left: 15px; font-size: 11px; text-decoration: underline; }
-
-        #expiry-timer {
-            font-family: monospace;
-            color: #ff4444;
-            font-weight: bold;
-            font-size: 14px;
-            margin-top: 10px;
+        .table-container {
+            background: var(--glass); backdrop-filter: blur(var(--card-blur));
+            border-radius: 20px; border: 1px solid var(--glass-border); overflow-x: auto;
         }
+
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        th { background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.5); text-transform: uppercase; 
+             font-size: 10px; padding: 20px; text-align: left; }
+        td { padding: 20px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+
+        .status-pill { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+        .status-active { background: rgba(0, 255, 127, 0.1); color: #00ff7f; }
+        .status-break { background: rgba(255, 165, 0, 0.1); color: #ffa500; }
+        .status-exempt { background: rgba(255, 255, 255, 0.1); color: #fff; }
+        
+        .btn-edit { color: var(--accent); cursor: pointer; margin-right: 15px; }
+        .btn-del { color: #ff5f5f; cursor: pointer; }
+
+        #expiry-timer { font-size: 12px; color: #ff5f5f; margin-top: 15px; font-weight: 600; }
+        .view-mode .admin-only { display: none !important; }
     </style>
 </head>
-<body>
+<body id="main-body">
 
     <canvas id="snow-canvas"></canvas>
 
     <div id="login-overlay">
         <div class="login-card">
             <div class="security-icon">❄️</div>
-            <h2 style="color: #fff; letter-spacing: 3px; margin-bottom: 5px;">AUTHORIZATION</h2>
-            <p style="color: var(--neon-blue); font-size: 12px; margin-bottom: 15px;">CHECK DISCORD FOR SESSION KEY</p>
-            
-            <input type="text" id="access-key" placeholder="SESSION CODE" style="text-align: center; width: 80%; font-size: 18px; letter-spacing: 2px;">
-            <div id="expiry-timer">KEY EXPIRES IN: 30s</div>
-            
-            <button class="btn-action" onclick="verifyAccess()">SYNC & AUTHORIZE</button>
+            <h2 style="margin: 0 0 10px 0;">Identity Check</h2>
+            <p style="color: rgba(255,255,255,0.5); font-size: 13px; margin-bottom: 25px;">Enter session key to access the terminal.</p>
+            <input type="text" id="access-key" placeholder="••••••••" style="text-align: center; letter-spacing: 4px; font-size: 20px;">
+            <div id="expiry-timer">Connecting to database...</div>
+            <button class="btn-action" onclick="verifyAccess()">AUTHORIZE ACCESS</button>
         </div>
     </div>
 
     <div id="dashboard">
         <div class="header">
-            <h1>PRIMAL PANIC // STAFF CORE</h1>
-            <p style="margin:5px 0 0 0; font-weight:bold; color: var(--neon-blue); letter-spacing: 2px;">ENCRYPTED MANAGEMENT TERMINAL</p>
+            <h1>Staff Registry</h1>
+            <p id="access-label" style="margin: 5px 0; font-size: 13px; opacity: 0.6;"></p>
         </div>
 
-        <div class="console-box">
-            <h3 id="form-title" style="color: #fff; margin-top:0; letter-spacing: 1px;">DATABASE INPUT CONSOLE</h3>
+        <div class="console-box admin-only">
+            <h3 style="margin: 0 0 20px 0;">Manage Personnel</h3>
             <input type="hidden" id="edit-id">
             <div class="grid-inputs">
-                <div class="input-wrap"><span class="input-header-text">Staff Username</span><input type="text" id="name"></div>
-                <div class="input-wrap"><span class="input-header-text">Security Rank</span><input type="text" id="rank"></div>
-                <div class="input-wrap"><span class="input-header-text">Region</span><input type="text" id="region"></div>
-                <div class="input-wrap"><span class="input-header-text">Joined Date</span><input type="date" id="joined"></div>
-                <div class="input-wrap"><span class="input-header-text">Latest Promotion</span><input type="date" id="promoted"></div>
-                <div class="input-wrap">
-                    <span class="input-header-text">Duty Status</span>
+                <div class="input-wrap"><label>Staff Username</label><input type="text" id="name"></div>
+                <div class="input-wrap"><label>Security Rank</label><input type="text" id="rank"></div>
+                <div class="input-wrap"><label>Region</label><input type="text" id="region"></div>
+                <div class="input-wrap"><label>Joined Date</label><input type="date" id="joined"></div>
+                <div class="input-wrap"><label>Duty Status</label>
                     <select id="status">
                         <option value="ACTIVE">ACTIVE</option>
                         <option value="ON BREAK">ON BREAK</option>
                         <option value="EXEMPT">EXEMPT</option>
                     </select>
                 </div>
-                <div class="input-wrap"><span class="input-header-text">Strikes</span><input type="number" id="strikes" value="0"></div>
+                <div class="input-wrap"><label>Strikes</label><input type="number" id="strikes" value="0"></div>
             </div>
-            <button id="main-btn" class="btn-action" onclick="saveStaff()">UPLOAD DATA TO CLOUD & DISCORD</button>
-            <button id="cancel-btn" style="display:none; background: #222; color: #fff; margin-top:10px;" class="btn-action" onclick="resetForm()">ABORT EDIT</button>
+            <div style="display: flex; gap: 10px;">
+                <button id="main-btn" class="btn-action" onclick="saveStaff()">SAVE TO DATABASE</button>
+                <button id="cancel-btn" style="display:none; background: rgba(255,255,255,0.05); color: #fff;" class="btn-action" onclick="resetForm()">CANCEL</button>
+            </div>
         </div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Staff Name</th><th>Rank</th><th>Region</th><th>Joined Date</th><th>Promotion Date</th><th>Status</th><th>Strikes</th><th>Management</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody"></tbody>
-        </table>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Staff Identity</th><th>Rank</th><th>Region</th><th>Joined</th><th>Status</th><th>Strikes</th>
+                        <th class="admin-only">Management</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
     </div>
 
     <script>
@@ -164,109 +190,82 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        const WEBHOOK = "https://discord.com/api/webhooks/1455169892415443139/9o_j_YqPQ1BoHSvxv1BXymZESPVY7fKF5srBwKUp6jtiHUydqQfqsF2EGER36IeF2kSW";
-        const LOG_WEBHOOK = "https://discord.com/api/webhooks/1455188856189227282/HbFUbggQQ7Fa8SFiGMmbQOjYoktu8vflyc9Pn9Rjjq9j1P8RzLeZrWk7AvhdXgaxB5Y9";
+        // --- WEBHOOK URL (DIRECT LINK) ---
+        const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1455188856189227282/HbFUbggQQ7Fa8SFiGMmbQOjYoktu8vflyc9Pn9Rjjq9j1P8RzLeZrWk7AvhdXgaxB5Y9";
         
-        let CURRENT_SESSION_CODE = "";
-        let staffList = {}; 
+        let isAdmin = false;
+        let staffList = {};
 
-        /* SECURE CODE GENERATION & 30s AUTO-WIPE */
-        window.onload = function() {
-            const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-            let randomCode = '';
-            for (let i = 0; i < 8; i++) {
-                randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
-            }
-            CURRENT_SESSION_CODE = randomCode;
-            
-            // Upload to Cloud
-            db.ref('current_session').set({ code: CURRENT_SESSION_CODE });
-
-            // Countdown Logic
-            let timeLeft = 30;
-            const timerDisplay = document.getElementById('expiry-timer');
-            const countdown = setInterval(() => {
-                timeLeft--;
-                timerDisplay.innerText = `KEY EXPIRES IN: ${timeLeft}s`;
-                if (timeLeft <= 0) {
-                    clearInterval(countdown);
-                    db.ref('current_session').remove();
-                    timerDisplay.innerText = "KEY EXPIRED. REFRESH PAGE.";
-                }
-            }, 1000);
-
-            // Send to Discord
-            const logData = {
-                "embeds": [{
-                    "title": "🔑 SECURE SESSION GENERATED",
-                    "description": "Session key issued. Validity period: 30 seconds.",
-                    "color": 16777215,
-                    "fields": [
-                        {"name": "Access Key", "value": "```" + randomCode + "```", "inline": false}
-                    ],
-                    "footer": {"text": "Primal Panic Security Layer"}
-                }]
-            };
-            fetch(LOG_WEBHOOK, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(logData) });
+        const dispatch = async (data) => {
+            try {
+                await fetch(DISCORD_WEBHOOK, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+            } catch (e) { console.error("Webhook Error:", e); }
         };
 
-        /* SNOW SYSTEM */
-        const canvas = document.getElementById('snow-canvas');
-        const ctx = canvas.getContext('2d');
-        let particles = [];
-        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-        window.addEventListener('resize', resize);
-        resize();
-        class Particle {
-            constructor() { this.reset(); this.y = Math.random() * canvas.height; }
-            reset() { this.x = Math.random() * canvas.width; this.y = -10; this.size = Math.random() * 2 + 1; this.speed = Math.random() * 1 + 0.3; this.opacity = Math.random() * 0.5 + 0.2; }
-            update() { this.y += this.speed; if (this.y > canvas.height) this.reset(); }
-            draw() { ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
-        }
-        for (let i = 0; i < 120; i++) particles.push(new Particle());
-        function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); particles.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(animate); }
-        animate();
+        window.addEventListener('DOMContentLoaded', async () => {
+            const timerDisplay = document.getElementById('expiry-timer');
+            try {
+                const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                let randomCode = '';
+                for (let i = 0; i < 8; i++) randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
+                
+                await db.ref('current_session').set({ code: randomCode });
 
-        /* SECURE VERIFICATION */
+                dispatch({
+                    "embeds": [{ 
+                        "title": "❄️ Terminal Session Initiated", 
+                        "description": `Authorization Key: \`${randomCode}\`\nStatus: \`AWAITING LOGIN\``, 
+                        "color": 52479,
+                        "timestamp": new Date().toISOString()
+                    }]
+                });
+
+                let timeLeft = 30;
+                timerDisplay.innerText = `Admin session expires in: ${timeLeft}s`;
+                const countdown = setInterval(() => {
+                    timeLeft--;
+                    if(timerDisplay) timerDisplay.innerText = `Admin session expires in: ${timeLeft}s`;
+                    if (timeLeft <= 0) {
+                        clearInterval(countdown);
+                        db.ref('current_session').remove();
+                        if(timerDisplay) timerDisplay.innerText = "Session expired. Refresh for new key.";
+                    }
+                }, 1000);
+
+            } catch (error) {
+                timerDisplay.innerText = "Connection Error. Check Rules.";
+            }
+        });
+
         function verifyAccess() {
-            const enteredKey = document.getElementById('access-key').value.trim().toUpperCase();
-            db.ref('current_session').once('value', (snapshot) => {
-                const session = snapshot.val();
-                if (session && session.code === enteredKey) {
-                    document.getElementById('login-overlay').style.display = 'none';
-                    document.getElementById('dashboard').style.display = 'block';
-                    startLiveSync();
-                } else {
-                    alert("AUTHORIZATION DENIED: Key is invalid or expired.");
-                }
+            const key = document.getElementById('access-key').value.trim().toUpperCase();
+            if (key === "VIEW") {
+                isAdmin = false;
+                document.getElementById('main-body').classList.add('view-mode');
+                document.getElementById('access-label').innerText = "VIEW ONLY";
+                enterDashboard();
+                return;
+            }
+            db.ref('current_session').once('value', (snap) => {
+                const data = snap.val();
+                if (data && data.code === key) {
+                    isAdmin = true;
+                    document.getElementById('access-label').innerText = "ADMIN ACCESS";
+                    enterDashboard();
+                } else { alert("Invalid Key."); }
             });
         }
 
-        /* DATA FUNCTIONS */
-        function startLiveSync() {
-            db.ref('staff').on('value', (snapshot) => {
-                staffList = snapshot.val() || {};
+        function enterDashboard() {
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            db.ref('staff').on('value', snap => {
+                staffList = snap.val() || {};
                 renderTable();
-            });
-        }
-
-        function saveStaff() {
-            const id = document.getElementById('edit-id').value;
-            const staffId = id ? id : Date.now();
-            const staffData = {
-                id: staffId,
-                name: document.getElementById('name').value,
-                rank: document.getElementById('rank').value,
-                region: document.getElementById('region').value,
-                joined: document.getElementById('joined').value,
-                promoted: document.getElementById('promoted').value,
-                status: document.getElementById('status').value,
-                strikes: document.getElementById('strikes').value
-            };
-            if (!staffData.name) return alert("Error: Name required.");
-            db.ref('staff/' + staffId).set(staffData).then(() => {
-                sendDiscord(staffData, id ? "REVISION" : "NEW_RECORD");
-                resetForm();
             });
         }
 
@@ -276,18 +275,33 @@
             Object.values(staffList).forEach(m => {
                 const row = tbody.insertRow();
                 row.innerHTML = `
-                    <td style="font-weight:bold; color:var(--neon-blue)">${m.name}</td>
+                    <td style="font-weight:600; color:var(--accent)">${m.name}</td>
                     <td>${m.rank}</td>
                     <td>${m.region}</td>
                     <td>${m.joined}</td>
-                    <td>${m.promoted}</td>
-                    <td style="font-weight:bold;">${m.status}</td>
-                    <td style="color:red; font-weight:bold;">${m.strikes}</td>
-                    <td>
-                        <span class="btn-edit" onclick="startEdit('${m.id}')">MODIFY</span>
-                        <span class="btn-del" onclick="deleteStaff('${m.id}')">WIPE</span>
-                    </td>`;
+                    <td><span class="status-pill status-${m.status === 'ON BREAK' ? 'break' : m.status === 'EXEMPT' ? 'exempt' : 'active'}">${m.status}</span></td>
+                    <td>${m.strikes}</td>
+                    ${isAdmin ? `<td><span class="btn-edit" onclick="startEdit('${m.id}')">Edit</span> | <span class="btn-del" onclick="deleteStaff('${m.id}')">Del</span></td>` : ''}
+                `;
             });
+        }
+
+        async function saveStaff() {
+            if (!isAdmin) return;
+            const id = document.getElementById('edit-id').value || Date.now();
+            const data = {
+                id,
+                name: document.getElementById('name').value,
+                rank: document.getElementById('rank').value,
+                region: document.getElementById('region').value,
+                joined: document.getElementById('joined').value,
+                status: document.getElementById('status').value,
+                strikes: document.getElementById('strikes').value
+            };
+            if (!data.name) return;
+            await db.ref('staff/' + id).set(data);
+            dispatch({ "embeds": [{ "title": "Record Updated", "description": `Staff: ${data.name}`, "color": 52479 }] });
+            resetForm();
         }
 
         function startEdit(id) {
@@ -297,42 +311,36 @@
             document.getElementById('rank').value = m.rank;
             document.getElementById('region').value = m.region;
             document.getElementById('joined').value = m.joined;
-            document.getElementById('promoted').value = m.promoted;
             document.getElementById('status').value = m.status;
             document.getElementById('strikes').value = m.strikes;
-            document.getElementById('form-title').innerText = "EDIT: " + m.name;
-            document.getElementById('main-btn').innerText = "COMMIT CHANGES";
             document.getElementById('cancel-btn').style.display = "block";
-            window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
         function resetForm() {
             document.getElementById('edit-id').value = '';
-            document.querySelectorAll('input:not([type=hidden])').forEach(i => i.value = '');
+            document.querySelectorAll('.console-box input').forEach(i => i.value = '');
             document.getElementById('strikes').value = '0';
-            document.getElementById('form-title').innerText = "DATABASE INPUT CONSOLE";
-            document.getElementById('main-btn').innerText = "UPLOAD DATA";
             document.getElementById('cancel-btn').style.display = "none";
         }
 
-        function deleteStaff(id) {
-            if(confirm("PURGE DATA?")) { db.ref('staff/' + id).remove(); }
-        }
+        function deleteStaff(id) { if(confirm("Delete?")) db.ref('staff/' + id).remove(); }
 
-        function sendDiscord(data, type) {
-            const embed = {
-                "embeds": [{
-                    "title": "❄️ TERMINAL LOG: " + type,
-                    "color": 1752223,
-                    "fields": [
-                        {"name": "Staff", "value": data.name, "inline": true},
-                        {"name": "Status", "value": data.status, "inline": true}
-                    ],
-                    "footer": {"text": "Terminal Active • " + new Date().toLocaleString()}
-                }]
-            };
-            fetch(WEBHOOK, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(embed) });
+        // Snow Canvas logic
+        const canvas = document.getElementById('snow-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize);
+        resize();
+        class Particle {
+            constructor() { this.reset(); this.y = Math.random() * canvas.height; }
+            reset() { this.x = Math.random() * canvas.width; this.y = -10; this.size = Math.random() * 2; this.speed = Math.random() * 0.5 + 0.2; this.opacity = Math.random() * 0.5; }
+            update() { this.y += this.speed; if (this.y > canvas.height) this.reset(); }
+            draw() { ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
         }
+        for (let i = 0; i < 70; i++) particles.push(new Particle());
+        function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); particles.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(animate); }
+        animate();
     </script>
 </body>
 </html>
